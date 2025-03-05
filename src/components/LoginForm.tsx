@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, HelpCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { sendPasswordResetEmail, getAuth} from 'firebase/auth';
+import { app } from '../firebaseConfig'; 
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +15,7 @@ const LoginForm: React.FC = () => {
   const [resetSent, setResetSent] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const auth = getAuth(app);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,20 +37,31 @@ const LoginForm: React.FC = () => {
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setResetSent(false);
+
     if (!forgotEmail) {
       setError('Please enter your email address');
       return;
     }
-    
-    // In a real app, this would send a password reset email
-    setIsLoading(true);
-    setTimeout(() => {
+
+    try {
+      setIsLoading(true);
+      await sendPasswordResetEmail(auth, forgotEmail);
       setResetSent(true);
+    } catch (err: any) {
+      if (err.code === "auth/user-not-found") {
+        setError("No account found with this email.");
+      } else {
+        setError(err.message);
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
+
 
   return (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">

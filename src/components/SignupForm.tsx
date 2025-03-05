@@ -34,18 +34,33 @@ const SignupForm: React.FC = () => {
 
       // Check if NM ID exists in Firestore
       const nmRef = doc(db, 'nm-students', nmId);
-      const nmSnap = await getDoc(nmRef).catch((err)=>{
-       console.log("Get Doc : ",err);
-       setError(err.message)
-      });
 
-      console.log(nmSnap.data())
+try {
+  const nmSnap = await getDoc(nmRef);
+  
+  console.log("Firestore Document: ", nmSnap); // Check what’s returned
 
-      if (!nmSnap.exists()) {
-        setError('NM ID not found. Please contact admin.');
-        setIsLoading(false);
-        return;
-      }
+  if (!nmSnap.exists()) {
+    setError('NM ID not found in records. Please contact the admin.');
+    setIsLoading(false);
+    return;
+  }
+
+  // Extract Data from Firestore
+  const studentData = nmSnap.data();
+  console.log("Student Data: ", studentData);
+
+  await signup(nmId, email, password, username, sem);
+  setSuccess('Account created! Please verify your email before logging in.');
+  
+  setTimeout(() => navigate('/login'), 3000);
+} catch (err: any) {
+  console.log("Error fetching Firestore document: ", err);
+  setError(err.message || 'Failed to create an account');
+} finally {
+  setIsLoading(false);
+}
+
 
       await signup(nmId, email, password, username, sem);
       setSuccess('Account created! Please verify your email before logging in.');

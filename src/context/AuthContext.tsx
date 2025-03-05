@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { User, AuthContextType } from '../types';
 import { app } from '../firebaseConfig'; 
 
@@ -40,13 +40,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Signup Function
   const signup = async (nmId: string, email: string, password: string, username: string, sem: string) => {
     try {
-      // Check if NM ID exists in Firestore
-      const nmIdDoc = await getDoc(doc(db, 'users', nmId));
-
-      if (!nmIdDoc.exists()) {
-        throw new Error('NM ID not found in records. Please contact the admin.');
-      }
-
       // Create user with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
@@ -63,7 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sem,
       };
 
-      await setDoc(doc(db, 'users', newUser.uid), userData);
+      await setDoc(doc(db, 'users', nmId), userData);
 
       setUser(userData);
       setIsAuthenticated(true);
