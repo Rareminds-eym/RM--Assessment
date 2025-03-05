@@ -30,8 +30,8 @@ const LoginForm: React.FC = () => {
       setIsLoading(true);
       await login(email, password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
