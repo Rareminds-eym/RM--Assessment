@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { TestProvider } from './context/TestContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Loader from './components/Loader';
 import Login from './pages/Login';
@@ -55,51 +56,53 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="flex flex-col min-h-screen">
-        <div className="flex-grow">
-          <Router>
-            <Routes>
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/network-error" element={<NetworkError />} />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/test" 
-                element={
-                  <ProtectedRoute>
-                    <TestPage />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/results" 
-                element={
-                  <ProtectedRoute>
-                    <Results />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/profile" 
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                } 
-              />
-            </Routes>
-          </Router>
+      <TestProvider>
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-grow">
+            <Router>
+              <Routes>
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/network-error" element={<NetworkError />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/test" 
+                  element={
+                    <ProtectedRoute>
+                      <TestPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/results" 
+                  element={
+                    <ProtectedRoute>
+                      <Results />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } 
+                />
+              </Routes>
+            </Router>
+          </div>
+          <Footer />
         </div>
-        <Footer />
-      </div>
+      </TestProvider>
     </AuthProvider>
   );
 }
