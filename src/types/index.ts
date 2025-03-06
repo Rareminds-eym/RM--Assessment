@@ -18,7 +18,7 @@ export interface Question {
   id: number;
   text: string;
   options: string[];
-  correctAnswer: number;
+  correctAnswer: string;
   section?: string;
   marks?: number;
 }
