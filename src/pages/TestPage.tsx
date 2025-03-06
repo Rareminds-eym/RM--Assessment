@@ -2,68 +2,139 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Clock, HelpCircle, X, Mail, Phone, MessageSquare, ArrowLeft } from 'lucide-react';
-import QuizQuestions from '../data/questions';
+import { getQuestions } from '../data/questions';
+import { Question } from '../types';
 import ReviewPage from '../components/test/ReviewPage';
 import InstructionsPage from '../components/test/InstructionsPage';
 import PermissionsModal from '../components/test/PermissionsModal';
 import WarningModal from '../components/test/WarningModal';
+import TimeWarningModal from '../components/test/TimeWarningModal';
+import { useAuth } from '../context/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig';
+
+interface TestAttempt {
+  nmId: string;
+  courseId: string;
+  timestamp: Date;
+  questions: {
+    questionId: number;
+    question: string;
+    attemptedAnswer: string | null;
+    correctAnswer: string;
+    isCorrect: boolean;
+    timeTaken: number;
+  }[];
+  totalScore: number;
+  totalQuestions: number;
+}
 
 const TestPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const courseId = location.state?.courseId;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const questionStartTimeRef = useRef<number>(Date.now());
+  const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // State for tab switching warnings
-  const [warningCount, setWarningCount] = useState(0);
-  const [showWarning, setShowWarning] = useState(false);
-  const [isTabVisible, setIsTabVisible] = useState(true);
-  const [showTimeWarning, setShowTimeWarning] = useState<'half-time' | 'review-time' | null>(null);
+  // Core state
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get questions for the selected course
-  const questions = QuizQuestions[courseId || ''] || [];
-
-  // Redirect if no courseId is provided
-  useEffect(() => {
-    if (!courseId) {
-      navigate('/dashboard');
-      return;
-    }
-  }, [courseId, navigate]);
-
-  // If no questions are found, show error state
-  if (questions.length === 0) {
-    return (
-      <div className="min-h-screen bg-pattern-chemistry flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Test Not Found</h2>
-          <p className="text-gray-600 mb-6">The requested test could not be loaded.</p>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Return to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // UI state
   const [showInstructions, setShowInstructions] = useState(true);
   const [showPermissions, setShowPermissions] = useState(false);
   const [testStarted, setTestStarted] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<(number | null)[]>(new Array(questions.length).fill(null));
   const [showResults, setShowResults] = useState(false);
-  const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>(new Array(questions.length).fill(0));
-  const [totalTimeLeft, setTotalTimeLeft] = useState(3600); // 1 hour in seconds
+  const [showReview, setShowReview] = useState(false);
+  const [isFromReview, setIsFromReview] = useState(false);
+
+  // Test state
+  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
+  const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>([]);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(60);
+
+  // Warning and modal state
+  const [warningCount, setWarningCount] = useState(0);
+  const [showWarning, setShowWarning] = useState(false);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+  const [showTimeWarning, setShowTimeWarning] = useState<'half-time' | 'review-time' | null>(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
-  const [showReview, setShowReview] = useState(false);
-  const [isFromReview, setIsFromReview] = useState(false);
-  const totalTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const questionStartTimeRef = useRef<number>(Date.now());
-  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Submit test attempt to Firestore
+  const submitTestAttempt = async (score: number) => {
+    if (!user?.nmId) return;
+
+    const attempt: TestAttempt = {
+      nmId: user.nmId,
+      courseId,
+      timestamp: new Date(),
+      questions: questions.map((q, index) => ({
+        questionId: q.id,
+        question: q.text,
+        attemptedAnswer: selectedAnswers[index],
+        correctAnswer: q.correctAnswer,
+        isCorrect: selectedAnswers[index] === q.correctAnswer,
+        timeTaken: timeTakenPerQuestion[index]
+      })),
+      totalScore: score,
+      totalQuestions: questions.length
+    };
+
+    try {
+      await addDoc(collection(db, "attempts"), attempt);
+    } catch (error) {
+      console.error("Error submitting test attempt:", error);
+    }
+  };
+
+  const handleFinish = async () => {
+    const score = selectedAnswers.filter((answer, index) => 
+      answer !== null && answer.toString() === questions[index].correctAnswer
+    ).length;
+    
+    await submitTestAttempt(score);
+    navigate('/results', { 
+      state: { 
+        score, 
+        totalQuestions: questions.length,
+        courseId 
+      } 
+    });
+  };
+
+  // Fetch questions when component mounts
+  useEffect(() => {
+    const loadQuestions = async () => {
+      if (!courseId) {
+        navigate('/dashboard');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const fetchedQuestions = await getQuestions(courseId);
+        if (fetchedQuestions.length === 0) {
+          throw new Error('No questions found for this course');
+        }
+        setQuestions(fetchedQuestions);
+        setSelectedAnswers(new Array(fetchedQuestions.length).fill(null));
+        setTimeTakenPerQuestion(new Array(fetchedQuestions.length).fill(0));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load questions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuestions();
+  }, [courseId, navigate]);
 
   // Handle tab visibility changes
   useEffect(() => {
@@ -76,7 +147,7 @@ const TestPage: React.FC = () => {
           setWarningCount(prev => {
             const newCount = prev + 1;
             if (newCount >= 3) {
-              handleFinish(); // Auto-submit after 3 warnings
+              handleFinish();
               return prev;
             }
             setShowWarning(true);
@@ -92,6 +163,7 @@ const TestPage: React.FC = () => {
     };
   }, [testStarted, showInstructions, showPermissions]);
 
+  // Initialize webcam
   useEffect(() => {
     const initializeWebcam = async () => {
       try {
@@ -115,6 +187,7 @@ const TestPage: React.FC = () => {
     };
   }, []);
 
+  // Timer effect
   useEffect(() => {
     if (showResults) {
       if (totalTimerRef.current) {
@@ -125,16 +198,13 @@ const TestPage: React.FC = () => {
 
     totalTimerRef.current = setInterval(() => {
       setTotalTimeLeft(prev => {
-        // Show half-time warning at 30 minutes
         if (prev === 1800) {
           setShowTimeWarning('half-time');
         }
-        // Show review-time warning and force review mode at 10 minutes
         else if (prev === 600) {
           setShowTimeWarning('review-time');
           setShowReview(true);
         }
-        // Auto-submit at time end
         if (prev <= 1) {
           handleFinish();
           return 0;
@@ -150,13 +220,40 @@ const TestPage: React.FC = () => {
     };
   }, [showResults]);
 
+  // Question timer effect
   useEffect(() => {
-    const timeTaken = Math.round((Date.now() - questionStartTimeRef.current) / 1000);
-    const newTimeTakenPerQuestion = [...timeTakenPerQuestion];
-    newTimeTakenPerQuestion[currentQuestion] = timeTaken;
-    setTimeTakenPerQuestion(newTimeTakenPerQuestion);
-    questionStartTimeRef.current = Date.now();
-  }, [currentQuestion]);
+    if (!testStarted || showReview) return;
+
+    // Clear any existing timer
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
+    }
+
+    // Start a new timer that updates every second
+    questionTimerRef.current = setInterval(() => {
+      setTimeTakenPerQuestion(prev => {
+        const newTimes = [...prev];
+        newTimes[currentQuestion] = (newTimes[currentQuestion] || 0) + 1;
+        return newTimes;
+      });
+    }, 1000);
+
+    // Cleanup function
+    return () => {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+      }
+    };
+  }, [currentQuestion, testStarted, showReview]);
+
+  // Add cleanup for question timer when test ends
+  useEffect(() => {
+    return () => {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,13 +271,6 @@ const TestPage: React.FC = () => {
       return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleFinish = () => {
-    const score = selectedAnswers.filter((answer, index) => 
-      answer === questions[index].correctAnswer
-    ).length;
-    navigate('/results', { state: { score, totalQuestions: questions.length } });
   };
 
   const handleQuestionSelect = (index: number) => {
@@ -209,6 +299,36 @@ const TestPage: React.FC = () => {
     setTestStarted(true);
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-pattern-chemistry flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-600">Loading questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-pattern-chemistry flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-lg text-center">
+          <h2 className="text-base font-bold text-gray-900 mb-4">Error Loading Test</h2>
+          <p className="text-sm text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (showInstructions) {
     return <InstructionsPage onContinue={handleStartTest} />;
   }
@@ -223,6 +343,7 @@ const TestPage: React.FC = () => {
         questions={questions}
         answers={selectedAnswers}
         timeLeft={totalTimeLeft}
+        timeTakenPerQuestion={timeTakenPerQuestion}
         formatTime={formatTime}
         onBack={() => {
           setShowReview(false);
@@ -240,24 +361,29 @@ const TestPage: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               {isFromReview && (
                 <button
                   onClick={() => setShowReview(true)}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-lg"
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-4 h-4" />
                   Back to Review
                 </button>
               )}
-              <h2 className="text-2xl font-bold text-gray-900 font-serif">
-                Question {currentQuestion + 1} of {questions.length}
-              </h2>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">
+                  Question {currentQuestion + 1} of {questions.length}
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Time spent: {formatTime(timeTakenPerQuestion[currentQuestion] || 0)}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 text-blue-600" />
-                <span className={`font-medium text-xl ${totalTimeLeft <= 300 ? 'text-red-500' : ''}`}>
+                <Clock className="w-5 h-5 text-blue-600" />
+                <span className={`font-medium text-base ${totalTimeLeft <= 300 ? 'text-red-500' : ''}`}>
                   {formatTime(totalTimeLeft)}
                 </span>
               </div>
@@ -267,7 +393,7 @@ const TestPage: React.FC = () => {
                 onClick={() => setShowHelp(!showHelp)}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
               >
-                <HelpCircle className="w-6 h-6 text-blue-600" />
+                <HelpCircle className="w-5 h-5 text-blue-600" />
               </motion.button>
             </div>
           </div>
@@ -282,7 +408,7 @@ const TestPage: React.FC = () => {
                 className="absolute top-20 right-6 w-96 bg-white rounded-lg shadow-xl p-6 z-50"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900">Help & Support</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Help & Support</h3>
                   <button
                     onClick={() => {
                       setShowHelp(false);
@@ -290,13 +416,13 @@ const TestPage: React.FC = () => {
                     }}
                     className="p-1 hover:bg-gray-100 rounded-full"
                   >
-                    <X className="w-5 h-5 text-gray-500" />
+                    <X className="w-4 h-4 text-gray-500" />
                   </button>
                 </div>
 
                 {!showContactForm ? (
                   <>
-                    <div className="space-y-4 text-base text-gray-600">
+                    <div className="space-y-4 text-sm text-gray-600">
                       <p>• Total time limit is 1 hour</p>
                       <p>• You can navigate between questions using the number buttons or Previous/Next</p>
                       <p>• Your progress is saved when switching questions</p>
@@ -304,27 +430,27 @@ const TestPage: React.FC = () => {
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-gray-200">
-                      <h4 className="text-lg font-medium text-gray-900 mb-4">Need more help?</h4>
+                      <h4 className="text-base font-medium text-gray-900 mb-4">Need more help?</h4>
                       <div className="space-y-3">
                         <a
                           href="mailto:support@rareminds.com"
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-base"
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
-                          <Mail className="w-5 h-5 text-blue-600" />
+                          <Mail className="w-4 h-4 text-blue-600" />
                           <span>support@rareminds.com</span>
                         </a>
                         <a
                           href="tel:+1234567890"
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-base"
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
-                          <Phone className="w-5 h-5 text-blue-600" />
+                          <Phone className="w-4 h-4 text-blue-600" />
                           <span>+1 (234) 567-890</span>
                         </a>
                         <button
                           onClick={() => setShowContactForm(true)}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-base w-full"
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm w-full"
                         >
-                          <MessageSquare className="w-5 h-5 text-blue-600" />
+                          <MessageSquare className="w-4 h-4 text-blue-600" />
                           <span>Send us a message</span>
                         </button>
                       </div>
@@ -339,13 +465,13 @@ const TestPage: React.FC = () => {
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-base font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Message
                       </label>
                       <textarea
                         value={contactMessage}
                         onChange={(e) => setContactMessage(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-base"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
                         rows={4}
                         placeholder="How can we help you?"
                         required
@@ -355,13 +481,13 @@ const TestPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowContactForm(false)}
-                        className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-base"
+                        className="flex-1 px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
                       >
                         Back
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-base"
+                        className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         Send
                       </button>
@@ -385,7 +511,7 @@ const TestPage: React.FC = () => {
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setCurrentQuestion(index)}
-                    className={`relative w-10 h-10 rounded-md flex items-center justify-center text-lg font-medium transition-all duration-200 ${
+                    className={`relative w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-lg'
                         : status === 'attempted'
@@ -393,9 +519,9 @@ const TestPage: React.FC = () => {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    <span>{index + 1}</span>
+                    <span>{(index + 1).toString()}</span>
                     {status === 'attempted' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border-2 border-white" />
                     )}
                     {isActive && (
                       <motion.div
@@ -410,17 +536,17 @@ const TestPage: React.FC = () => {
               })}
             </div>
             
-            <div className="flex justify-center gap-6 mt-4 text-sm">
+            <div className="flex justify-center gap-6 mt-4 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
+                <div className="w-2 h-2 bg-green-500 rounded-full" />
                 <span className="text-gray-600">Attempted</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-gray-200 rounded-full" />
+                <div className="w-2 h-2 bg-gray-200 rounded-full" />
                 <span className="text-gray-600">Unattempted</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-600 rounded-full" />
+                <div className="w-2 h-2 bg-blue-600 rounded-full" />
                 <span className="text-gray-600">Current</span>
               </div>
             </div>
@@ -433,7 +559,7 @@ const TestPage: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-xl shadow-lg p-8 min-h-[600px]"
           >
-            <h2 className="text-2xl text-gray-900 mb-8 text-center font-serif">
+            <h2 className="text-base text-gray-900 mb-8 text-center">
               {questions[currentQuestion].text}
             </h2>
             
@@ -444,24 +570,24 @@ const TestPage: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   onClick={() => {
                     const newAnswers = [...selectedAnswers];
-                    newAnswers[currentQuestion] = index;
+                    newAnswers[currentQuestion] = option;
                     setSelectedAnswers(newAnswers);
                   }}
-                  className={`w-full p-6 rounded-lg border-2 transition-all ${
-                    selectedAnswers[currentQuestion] === index
+                  className={`w-full p-4 rounded-lg border-2 transition-all ${
+                    selectedAnswers[currentQuestion] === option
                       ? 'border-blue-600 bg-blue-50 text-gray-900'
                       : 'border-gray-200 hover:border-blue-300 text-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-lg ${
-                      selectedAnswers[currentQuestion] === index
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-sm ${
+                      selectedAnswers[currentQuestion] === option
                         ? 'border-blue-600 bg-blue-600 text-white'
                         : 'border-gray-300'
                     }`}>
                       {String.fromCharCode(65 + index)}
                     </div>
-                    <span className="text-lg">{option}</span>
+                    <span className="text-sm">{option}</span>
                   </div>
                 </motion.button>
               ))}
@@ -478,13 +604,13 @@ const TestPage: React.FC = () => {
                   }
                 }}
                 disabled={currentQuestion === 0}
-                className={`flex items-center gap-3 px-8 py-3 rounded-lg text-lg ${
+                className={`flex items-center gap-3 px-6 py-2 rounded-lg text-sm ${
                   currentQuestion === 0
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
                 }`}
               >
-                <ChevronLeft className="w-6 h-6" />
+                <ChevronLeft className="w-4 h-4" />
                 Previous
               </motion.button>
               
@@ -492,40 +618,28 @@ const TestPage: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleNext}
-                className="flex items-center gap-3 px-8 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-lg"
+                className="flex items-center gap-3 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
               >
                 {isFromReview ? (
                   <>
                     Back to Review
-                    <ArrowLeft className="w-6 h-6" />
+                    <ArrowLeft className="w-4 h-4" />
                   </>
                 ) : currentQuestion === questions.length - 1 ? (
                   <>
                     Review Answers
-                    <ChevronRight className="w-6 h-6" />
+                    <ChevronRight className="w-4 h-4" />
                   </>
                 ) : (
                   <>
                     Next
-                    <ChevronRight className="w-6 h-6" />
+                    <ChevronRight className="w-4 h-4" />
                   </>
                 )}
               </motion.button>
             </div>
           </motion.div>
         </div>
-      </div>
-
-      {/* Webcam display (minimized in corner) */}
-      <div className="fixed bottom-4 right-4 w-64 h-48 bg-black rounded-lg overflow-hidden shadow-lg border-2 border-blue-600">
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute top-2 right-2 bg-red-500 h-3 w-3 rounded-full animate-pulse"></div>
       </div>
 
       {/* Warning Modal */}

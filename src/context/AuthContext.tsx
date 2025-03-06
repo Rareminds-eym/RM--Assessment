@@ -1,16 +1,16 @@
-import React, { createContext, useState, useContext, ReactNode } from "react";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 import {
   getFirestore,
   doc,
   setDoc,
-  getDoc,
   collection,
   getDocs,
   query,
@@ -25,70 +25,77 @@ const db = getFirestore(app);
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
-  // Login Function
+  useEffect(() => {
+    // Subscribe to auth state changes
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        if (!firebaseUser.emailVerified) {
+          await signOut(auth);
+          setUser(null);
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
+
+        try {
+          // Fetch user data from Firestore
+          const usersRef = collection(db, "users");
+          const q = query(
+            usersRef,
+            where("email", "==", firebaseUser.email),
+            limit(1)
+          );
+          const querySnapshot = await getDocs(q);
+          const users = querySnapshot.docs.map((doc) => ({
+            ...doc.data(),
+          }));
+
+          if (users.length === 1) {
+            setUser(users[0] as User);
+            setIsAuthenticated(true);
+          } else {
+            console.error("User not found in database");
+            await signOut(auth);
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          await signOut(auth);
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+      setLoading(false);
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
+
   const login = async (email: string, password: string) => {
-    console.log(1)
-
     try {
-      console.log("Email : ", email);
-      console.log("Password : ", password);
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      console.log(1)
-
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userData = userCredential.user;
 
       if (!userData.emailVerified) {
         throw new Error("Email not verified. Please check your inbox.");
       }
-      console.log(1)
 
-      const usersRef = collection(db, "users"); // Reference to the "users" collection
-      const q = query(usersRef, where("email", "==", email), limit(1));
-      try {
-        const querySnapshot = await getDocs(q); // Fetch all documents
-        const users = querySnapshot.docs.map((doc) => ({
-          // id: doc.id, // Include document ID
-          ...doc.data(), // Merge document data
-        }));
-
-        console.log(users); // Logs an array of all users
-
-        if (users.length == 1) {
-          setUser(users[0] as User);
-          setIsAuthenticated(true);
-          localStorage.setItem("user", JSON.stringify(users[0]));
-        } else {
-          throw new Error("User not found in database.");
-        }
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-
-      // const userDoc = await getDoc(doc(db, "users", userData.uid));
-
-      // if (userDoc.exists()) {
-      //   setUser(userDoc.data() as User);
-      //   setIsAuthenticated(true);
-      //   localStorage.setItem("user", JSON.stringify(userDoc.data()));
-      // } else {
-      //   throw new Error("User not found in database.");
-      // }
+      // Auth state change listener will handle the rest
     } catch (error: any) {
       throw new Error(error.message || "Failed to log in.");
     }
   };
 
-  // Signup Function
   const signup = async (
     nmId: string,
     email: string,
@@ -97,18 +104,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     sem: string
   ) => {
     try {
-      // Create user with Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
 
-      // Send email verification
       await sendEmailVerification(newUser);
 
-      // Save user details to Firestore
       const userData: User = {
         id: newUser.uid,
         nmId,
@@ -119,28 +119,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       await setDoc(doc(db, "users", nmId), userData);
 
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem("user", JSON.stringify(userData));
-
+      // Don't set user state here - wait for email verification
       return "Signup successful! Please verify your email before logging in.";
     } catch (error: any) {
       throw new Error(error.message || "Signup failed.");
     }
   };
 
-  // Logout Function
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem("user");
+    // Auth state change listener will handle the rest
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider
-      value={{ user, login, signup, logout, isAuthenticated }}
-    >
+    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
