@@ -46,7 +46,7 @@ const ReviewPage: React.FC<ReviewPageProps> = ({
         <div className="p-4 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-medium text-gray-900 font-serif">All Questions</h2>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-green-100 rounded-full mr-1"></div>
                 <span className="text-sm text-gray-600">Answered</span>
@@ -74,8 +74,12 @@ const ReviewPage: React.FC<ReviewPageProps> = ({
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-gray-500">Question {index + 1}</span>
-                    <span className="mx-2 text-gray-300">|</span>
-                    <span className="text-sm font-medium text-gray-500">{question.marks} marks</span>
+                    {question.marks && (
+                      <>
+                        <span className="mx-2 text-gray-300">|</span>
+                        <span className="text-sm font-medium text-gray-500">{question.marks} marks</span>
+                      </>
+                    )}
                     {question.section && (
                       <>
                         <span className="mx-2 text-gray-300">|</span>
@@ -100,7 +104,7 @@ const ReviewPage: React.FC<ReviewPageProps> = ({
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <div className="flex items-center">
                       <span className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 mr-2">
-                        {String.fromCharCode(97 + selectedOption)}
+                        {String.fromCharCode(65 + selectedOption)}
                       </span>
                       <span className="text-gray-700 flex-1">{question.options[selectedOption]}</span>
                       <CheckCircle className="h-5 w-5 text-green-500 ml-2 flex-shrink-0" />

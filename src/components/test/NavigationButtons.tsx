@@ -1,10 +1,12 @@
 import React from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 interface NavigationButtonsProps {
   currentQuestion: number;
   totalQuestions: number;
   onPrevious: () => void;
   onNext: () => void;
+  isFromReview?: boolean;
 }
 
 const NavigationButtons: React.FC<NavigationButtonsProps> = ({
@@ -12,6 +14,7 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
   totalQuestions,
   onPrevious,
   onNext,
+  isFromReview = false
 }) => {
   return (
     <div className="flex justify-between">
@@ -23,19 +26,20 @@ const NavigationButtons: React.FC<NavigationButtonsProps> = ({
         Previous
       </button>
       
-      {currentQuestion < totalQuestions - 1 ? (
+      {isFromReview ? (
         <button
           onClick={onNext}
-          className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center"
         >
-          Next
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Review
         </button>
       ) : (
         <button
           onClick={onNext}
-          className="px-4 py-2 bg-green-600 text-white font-medium rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
-          Review Answers
+          {currentQuestion < totalQuestions - 1 ? 'Next' : 'Review Answers'}
         </button>
       )}
     </div>
