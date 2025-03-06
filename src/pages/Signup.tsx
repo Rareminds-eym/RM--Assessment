@@ -8,7 +8,7 @@ const Signup: React.FC = () => {
         <div className="flex justify-center">
           <div className="rounded-full bg-white p-3 shadow-md h-24 w-24 flex items-center justify-center border-2 border-blue-100">
             {/* Placeholder for logo */}
-            <div className="text-center text-xs text-gray-400">Logo Placeholder</div>
+            <img src="/bulb.png" alt="Logo" className="mx-auto h-16 w-16" />
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 font-serif">

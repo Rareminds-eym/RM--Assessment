@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Camera, Mic, MonitorX, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { Camera, Mic, MonitorX, AlertTriangle, XCircle, Clock } from 'lucide-react';
 import UserProfile from '../components/UserProfile';
 import { useAuth } from '../context/AuthContext';
 
@@ -166,7 +166,7 @@ const Dashboard: React.FC = () => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center">
-            <BookOpen className="h-8 w-8 text-blue-600 mr-3" />
+            <img src="/bulb.png" alt="Logo" className="h-9 w-9 text-blue-600 mr-3" />
             <h1 className="text-xl font-bold text-gray-900 font-serif">Rareminds Test Portal</h1>
           </div>
           <UserProfile />
