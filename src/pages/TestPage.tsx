@@ -78,10 +78,10 @@ const TestPage: React.FC = () => {
       questions: questions.map((q, index) => ({
         questionId: q.id,
         question: q.text,
-        attemptedAnswer: selectedAnswers[index],
+        attemptedAnswer: selectedAnswers[index] ?? "Not attempted",
         correctAnswer: q.correctAnswer,
         isCorrect: selectedAnswers[index] === q.correctAnswer,
-        timeTaken: timeTakenPerQuestion[index]
+        timeTaken: timeTakenPerQuestion[index] || 0,
       })),
       totalScore: score,
       totalQuestions: questions.length
@@ -95,11 +95,17 @@ const TestPage: React.FC = () => {
   };
 
   const handleFinish = async () => {
-    const score = selectedAnswers.filter((answer, index) => 
-      answer !== null && answer.toString() === questions[index].correctAnswer
+    console.log("Test is being auto-submitted...");
+    
+    // Ensure all unanswered questions are marked as "Not attempted"
+    const finalSelectedAnswers = selectedAnswers.map(ans => ans ?? "Not attempted");
+  
+    const score = finalSelectedAnswers.filter((answer, index) => 
+      answer !== "Not attempted" && answer === questions[index].correctAnswer
     ).length;
     
     await submitTestAttempt(score);
+    
     navigate('/results', { 
       state: { 
         score, 
@@ -108,6 +114,7 @@ const TestPage: React.FC = () => {
       } 
     });
   };
+  
 
   // Fetch questions when component mounts
   useEffect(() => {
@@ -219,6 +226,14 @@ const TestPage: React.FC = () => {
       }
     };
   }, [showResults]);
+
+  // Auto-submit when timer reaches zero
+  useEffect(() => {
+    if (totalTimeLeft <= 0) {
+      console.log("Timer ended! Auto-submitting test...");
+      setTimeout(handleFinish, 1000); // Delay by 1 second to ensure final state update
+    }
+  }, [totalTimeLeft]);
 
   // Question timer effect
   useEffect(() => {
