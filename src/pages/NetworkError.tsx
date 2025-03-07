@@ -34,11 +34,11 @@ const NetworkError: React.FC = () => {
               
               <div className="flex flex-col space-y-2">
                 <a 
-                  href="mailto:support@rareminds.com" 
+                  href="mailto:info@rareminds.in" 
                   className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                  support@rareminds.com
+                  info@rareminds.in
                 </a>
                 
                 <a 
@@ -46,7 +46,7 @@ const NetworkError: React.FC = () => {
                   className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
                 >
                   <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                  +91 800 123 4567
+                  +91 9902326951
                 </a>
               </div>
             </div>

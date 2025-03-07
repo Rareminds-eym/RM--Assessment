@@ -1,17 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Clock, HelpCircle, X, Mail, Phone, MessageSquare, ArrowLeft } from 'lucide-react';
-import { getQuestions } from '../data/questions';
-import { Question } from '../types';
-import ReviewPage from '../components/test/ReviewPage';
-import InstructionsPage from '../components/test/InstructionsPage';
-import PermissionsModal from '../components/test/PermissionsModal';
-import WarningModal from '../components/test/WarningModal';
-import TimeWarningModal from '../components/test/TimeWarningModal';
-import { useAuth } from '../context/AuthContext';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Clock,
+  HelpCircle,
+  X,
+  Mail,
+  Phone,
+  MessageSquare,
+  ArrowLeft,
+} from "lucide-react";
+import { getQuestions } from "../data/questions";
+import { Question } from "../types";
+import ReviewPage from "../components/test/ReviewPage";
+import InstructionsPage from "../components/test/InstructionsPage";
+import PermissionsModal from "../components/test/PermissionsModal";
+import WarningModal from "../components/test/WarningModal";
+import TimeWarningModal from "../components/test/TimeWarningModal";
+import { useAuth } from "../context/AuthContext";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import { useTest } from "../context/TestContext";
 
 interface TestAttempt {
   nmId: string;
@@ -40,7 +51,10 @@ const TestPage: React.FC = () => {
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Core state
-  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const { questions, setQuestions, selectedAnswers, setSelectedAnswers } =
+    useTest();
+  // const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,66 +68,29 @@ const TestPage: React.FC = () => {
   const [isFromReview, setIsFromReview] = useState(false);
 
   // Test state
-  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
-  const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>([]);
-  const [totalTimeLeft, setTotalTimeLeft] = useState(60);
+  // const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
+  const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>(
+    []
+  );
+  const [totalTimeLeft, setTotalTimeLeft] = useState(20);
+  const [submit, setSubmit] = useState<boolean>(false);
 
   // Warning and modal state
   const [warningCount, setWarningCount] = useState(0);
   const [showWarning, setShowWarning] = useState(false);
   const [isTabVisible, setIsTabVisible] = useState(true);
-  const [showTimeWarning, setShowTimeWarning] = useState<'half-time' | 'review-time' | null>(null);
+  const [showTimeWarning, setShowTimeWarning] = useState<
+    "half-time" | "review-time" | null
+  >(null);
   const [showHelp, setShowHelp] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
-  const [contactMessage, setContactMessage] = useState('');
-
-  // Submit test attempt to Firestore
-  const submitTestAttempt = async (score: number) => {
-    if (!user?.nmId) return;
-
-    const attempt: TestAttempt = {
-      nmId: user.nmId,
-      courseId,
-      timestamp: new Date(),
-      questions: questions.map((q, index) => ({
-        questionId: q.id,
-        question: q.text,
-        attemptedAnswer: selectedAnswers[index],
-        correctAnswer: q.correctAnswer,
-        isCorrect: selectedAnswers[index] === q.correctAnswer,
-        timeTaken: timeTakenPerQuestion[index]
-      })),
-      totalScore: score,
-      totalQuestions: questions.length
-    };
-
-    try {
-      await addDoc(collection(db, "attempts"), attempt);
-    } catch (error) {
-      console.error("Error submitting test attempt:", error);
-    }
-  };
-
-  const handleFinish = async () => {
-    const score = selectedAnswers.filter((answer, index) => 
-      answer !== null && answer.toString() === questions[index].correctAnswer
-    ).length;
-    
-    await submitTestAttempt(score);
-    navigate('/results', { 
-      state: { 
-        score, 
-        totalQuestions: questions.length,
-        courseId 
-      } 
-    });
-  };
+  const [contactMessage, setContactMessage] = useState("");
 
   // Fetch questions when component mounts
   useEffect(() => {
     const loadQuestions = async () => {
       if (!courseId) {
-        navigate('/dashboard');
+        navigate("/dashboard");
         return;
       }
 
@@ -121,13 +98,15 @@ const TestPage: React.FC = () => {
         setLoading(true);
         const fetchedQuestions = await getQuestions(courseId);
         if (fetchedQuestions.length === 0) {
-          throw new Error('No questions found for this course');
+          throw new Error("No questions found for this course");
         }
         setQuestions(fetchedQuestions);
         setSelectedAnswers(new Array(fetchedQuestions.length).fill(null));
         setTimeTakenPerQuestion(new Array(fetchedQuestions.length).fill(0));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load questions');
+        setError(
+          err instanceof Error ? err.message : "Failed to load questions"
+        );
       } finally {
         setLoading(false);
       }
@@ -142,12 +121,12 @@ const TestPage: React.FC = () => {
       if (testStarted && !showInstructions && !showPermissions) {
         const isVisible = !document.hidden;
         setIsTabVisible(isVisible);
-        
+
         if (!isVisible) {
-          setWarningCount(prev => {
+          setWarningCount((prev) => {
             const newCount = prev + 1;
             if (newCount >= 3) {
-              handleFinish();
+              setSubmit(true);
               return prev;
             }
             setShowWarning(true);
@@ -157,9 +136,9 @@ const TestPage: React.FC = () => {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [testStarted, showInstructions, showPermissions]);
 
@@ -167,7 +146,9 @@ const TestPage: React.FC = () => {
   useEffect(() => {
     const initializeWebcam = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -182,7 +163,7 @@ const TestPage: React.FC = () => {
       if (videoRef.current && videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
         const tracks = stream.getTracks();
-        tracks.forEach(track => track.stop());
+        tracks.forEach((track) => track.stop());
       }
     };
   }, []);
@@ -196,29 +177,30 @@ const TestPage: React.FC = () => {
       return;
     }
 
-    totalTimerRef.current = setInterval(() => {
-      setTotalTimeLeft(prev => {
-        if (prev === 1800) {
-          setShowTimeWarning('half-time');
-        }
-        else if (prev === 600) {
-          setShowTimeWarning('review-time');
-          setShowReview(true);
-        }
-        if (prev <= 1) {
-          handleFinish();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    if (testStarted) {
+      totalTimerRef.current = setInterval(() => {
+        setTotalTimeLeft((prev) => {
+          if (prev === 1800) {
+            setShowTimeWarning("half-time");
+          } else if (prev === 600) {
+            setShowTimeWarning("review-time");
+            setShowReview(true);
+          }
+          if (prev <= 1) {
+            setSubmit(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
     return () => {
       if (totalTimerRef.current) {
         clearInterval(totalTimerRef.current);
       }
     };
-  }, [showResults]);
+  }, [showResults, testStarted]);
 
   // Question timer effect
   useEffect(() => {
@@ -231,7 +213,7 @@ const TestPage: React.FC = () => {
 
     // Start a new timer that updates every second
     questionTimerRef.current = setInterval(() => {
-      setTimeTakenPerQuestion(prev => {
+      setTimeTakenPerQuestion((prev) => {
         const newTimes = [...prev];
         newTimes[currentQuestion] = (newTimes[currentQuestion] || 0) + 1;
         return newTimes;
@@ -257,8 +239,8 @@ const TestPage: React.FC = () => {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Message sent! Our support team will get back to you soon.');
-    setContactMessage('');
+    alert("Message sent! Our support team will get back to you soon.");
+    setContactMessage("");
     setShowContactForm(false);
     setShowHelp(false);
   };
@@ -268,9 +250,11 @@ const TestPage: React.FC = () => {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     if (hrs > 0) {
-      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
     }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleQuestionSelect = (index: number) => {
@@ -285,7 +269,7 @@ const TestPage: React.FC = () => {
     } else if (currentQuestion === questions.length - 1) {
       setShowReview(true);
     } else {
-      setCurrentQuestion(prev => prev + 1);
+      setCurrentQuestion((prev) => prev + 1);
     }
   };
 
@@ -298,6 +282,64 @@ const TestPage: React.FC = () => {
     setShowPermissions(false);
     setTestStarted(true);
   };
+
+  // Submit test attempt to Firestore
+
+  useEffect(() => {
+    if (submit) {
+      try {
+        const submitTestAttempt = async (score: number) => {
+          if (!user?.nmId) return;
+
+          const attempt: TestAttempt = {
+            nmId: user.nmId,
+            courseId,
+            timestamp: new Date(),
+            questions: questions.map((q, index) => ({
+              questionId: q.id,
+              question: q.text,
+              attemptedAnswer: selectedAnswers[index],
+              correctAnswer: q.correctAnswer,
+              isCorrect: selectedAnswers[index] === q.correctAnswer,
+              timeTaken: timeTakenPerQuestion[index],
+            })),
+            totalScore: score,
+            totalQuestions: questions.length,
+          };
+
+          try {
+            await addDoc(collection(db, "attempts"), attempt);
+          } catch (error) {
+            console.error("Error submitting test attempt:", error);
+          }
+        };
+
+        const handleFinish = async () => {
+          console.log(selectedAnswers);
+          const score = selectedAnswers.filter(
+            (answer, index) =>
+              answer !== null &&
+              answer.toString() === questions[index].correctAnswer
+          ).length;
+
+          await submitTestAttempt(score);
+          navigate("/results", {
+            state: {
+              score,
+              totalQuestions: questions.length,
+              courseId,
+            },
+          });
+        };
+
+        handleFinish();
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setSubmit(false);
+      }
+    }
+  }, [submit]);
 
   // Show loading state
   if (loading) {
@@ -316,10 +358,12 @@ const TestPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-pattern-chemistry flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-          <h2 className="text-base font-bold text-gray-900 mb-4">Error Loading Test</h2>
+          <h2 className="text-base font-bold text-gray-900 mb-4">
+            Error Loading Test
+          </h2>
           <p className="text-sm text-gray-600 mb-6">{error}</p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate("/dashboard")}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Return to Dashboard
@@ -349,7 +393,7 @@ const TestPage: React.FC = () => {
           setShowReview(false);
           setCurrentQuestion(questions.length - 1);
         }}
-        onSubmit={handleFinish}
+        onSubmit={() => setSubmit(true)}
         onQuestionSelect={handleQuestionSelect}
       />
     );
@@ -376,14 +420,19 @@ const TestPage: React.FC = () => {
                   Question {currentQuestion + 1} of {questions.length}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  Time spent: {formatTime(timeTakenPerQuestion[currentQuestion] || 0)}
+                  Time spent:{" "}
+                  {formatTime(timeTakenPerQuestion[currentQuestion] || 0)}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-blue-600" />
-                <span className={`font-medium text-base ${totalTimeLeft <= 300 ? 'text-red-500' : ''}`}>
+                <span
+                  className={`font-medium text-base ${
+                    totalTimeLeft <= 300 ? "text-red-500" : ""
+                  }`}
+                >
                   {formatTime(totalTimeLeft)}
                 </span>
               </div>
@@ -408,7 +457,9 @@ const TestPage: React.FC = () => {
                 className="absolute top-20 right-6 w-96 bg-white rounded-lg shadow-xl p-6 z-50"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-base font-semibold text-gray-900">Help & Support</h3>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Help & Support
+                  </h3>
                   <button
                     onClick={() => {
                       setShowHelp(false);
@@ -424,27 +475,35 @@ const TestPage: React.FC = () => {
                   <>
                     <div className="space-y-4 text-sm text-gray-600">
                       <p>• Total time limit is 1 hour</p>
-                      <p>• You can navigate between questions using the number buttons or Previous/Next</p>
+                      <p>
+                        • You can navigate between questions using the number
+                        buttons or Previous/Next
+                      </p>
                       <p>• Your progress is saved when switching questions</p>
-                      <p>• Review all answers before submitting on the last question</p>
+                      <p>
+                        • Review all answers before submitting on the last
+                        question
+                      </p>
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-gray-200">
-                      <h4 className="text-base font-medium text-gray-900 mb-4">Need more help?</h4>
+                      <h4 className="text-base font-medium text-gray-900 mb-4">
+                        Need more help?
+                      </h4>
                       <div className="space-y-3">
                         <a
-                          href="mailto:support@rareminds.com"
+                          href="mailto:info@rareminds.in"
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
                           <Mail className="w-4 h-4 text-blue-600" />
-                          <span>support@rareminds.com</span>
+                          <span>info@rareminds.in</span>
                         </a>
                         <a
                           href="tel:+1234567890"
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
                           <Phone className="w-4 h-4 text-blue-600" />
-                          <span>+1 (234) 567-890</span>
+                          <span>+91 9902326951</span>
                         </a>
                         <button
                           onClick={() => setShowContactForm(true)}
@@ -502,9 +561,10 @@ const TestPage: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-md mb-8">
             <div className="flex items-center justify-center gap-3 flex-wrap">
               {questions.map((_, index) => {
-                const status = selectedAnswers[index] !== null ? "attempted" : "unattempted";
+                const status =
+                  selectedAnswers[index] !== null ? "attempted" : "unattempted";
                 const isActive = currentQuestion === index;
-                
+
                 return (
                   <motion.button
                     key={index}
@@ -513,21 +573,24 @@ const TestPage: React.FC = () => {
                     onClick={() => setCurrentQuestion(index)}
                     className={`relative w-8 h-8 rounded-md flex items-center justify-center text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : status === 'attempted'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? "bg-blue-600 text-white shadow-lg"
+                        : status === "attempted"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
                     <span>{(index + 1).toString()}</span>
-                    {status === 'attempted' && (
+                    {status === "attempted" && (
                       <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border-2 border-white" />
                     )}
                     {isActive && (
                       <motion.div
                         layoutId="activeQuestion"
                         className="absolute inset-0 border-2 rounded-md"
-                        style={{ borderColor: status === 'attempted' ? '#22c55e' : '#2563eb' }}
+                        style={{
+                          borderColor:
+                            status === "attempted" ? "#22c55e" : "#2563eb",
+                        }}
                         transition={{ duration: 0.2 }}
                       />
                     )}
@@ -535,7 +598,7 @@ const TestPage: React.FC = () => {
                 );
               })}
             </div>
-            
+
             <div className="flex justify-center gap-6 mt-4 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full" />
@@ -562,7 +625,7 @@ const TestPage: React.FC = () => {
             <h2 className="text-base text-gray-900 mb-8 text-center">
               {questions[currentQuestion].text}
             </h2>
-            
+
             <div className="space-y-6 max-w-3xl mx-auto">
               {questions[currentQuestion].options.map((option, index) => (
                 <motion.button
@@ -575,16 +638,18 @@ const TestPage: React.FC = () => {
                   }}
                   className={`w-full p-4 rounded-lg border-2 transition-all ${
                     selectedAnswers[currentQuestion] === option
-                      ? 'border-blue-600 bg-blue-50 text-gray-900'
-                      : 'border-gray-200 hover:border-blue-300 text-gray-600'
+                      ? "border-blue-600 bg-blue-50 text-gray-900"
+                      : "border-gray-200 hover:border-blue-300 text-gray-600"
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-sm ${
-                      selectedAnswers[currentQuestion] === option
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-sm ${
+                        selectedAnswers[currentQuestion] === option
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-gray-300"
+                      }`}
+                    >
                       {String.fromCharCode(65 + index)}
                     </div>
                     <span className="text-sm">{option}</span>
@@ -600,20 +665,20 @@ const TestPage: React.FC = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (currentQuestion > 0) {
-                    setCurrentQuestion(prev => prev - 1);
+                    setCurrentQuestion((prev) => prev - 1);
                   }
                 }}
                 disabled={currentQuestion === 0}
                 className={`flex items-center gap-3 px-6 py-2 rounded-lg text-sm ${
                   currentQuestion === 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-blue-50 text-blue-600 hover:bg-blue-100"
                 }`}
               >
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </motion.button>
-              
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

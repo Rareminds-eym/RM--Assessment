@@ -4,7 +4,7 @@ import { Question } from '../../types';
 
 interface ReviewPageProps {
   questions: Question[];
-  answers: Record<number, number>;
+  answers: (string | null)[];
   timeLeft: number;
   timeTakenPerQuestion: number[];
   formatTime: (seconds: number) => string;
@@ -64,7 +64,7 @@ const ReviewPage: React.FC<ReviewPageProps> = ({
         <div className="divide-y divide-gray-200">
           {questions.map((question, index) => {
             const isAnswered = answers[index] !== undefined;
-            const selectedOption = isAnswered ? answers[index] : -1;
+            const selectedOption = isAnswered ? answers[index] : "Not Attempted";
             
             return (
               <div 
@@ -106,11 +106,11 @@ const ReviewPage: React.FC<ReviewPageProps> = ({
                   <div className="bg-white rounded-lg border border-gray-200 p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <span className="w-5 h-5 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs mr-2">
+                        {/* <span className="w-5 h-5 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs mr-2">
                           {String.fromCharCode(65 + selectedOption)}
-                        </span>
-                        <span className="text-sm text-gray-700">{question.options[selectedOption]}</span>
-                        <CheckCircle className="h-4 w-4 text-green-500 ml-2 flex-shrink-0" />
+                        </span> */}
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{selectedOption || "Not Attempted"}</span>
                       </div>
                       <div className="flex items-center text-xs text-gray-500">
                         <Clock className="h-4 w-4 mr-1" />
