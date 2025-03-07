@@ -22,6 +22,7 @@ import TimeWarningModal from "../components/test/TimeWarningModal";
 import { useAuth } from "../context/AuthContext";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { useTest } from "../context/TestContext";
 
 interface TestAttempt {
   nmId: string;
@@ -50,7 +51,10 @@ const TestPage: React.FC = () => {
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Core state
-  const [questions, setQuestions] = useState<Question[]>([]);
+
+  const { questions, setQuestions, selectedAnswers, setSelectedAnswers } =
+    useTest();
+  // const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,11 +68,12 @@ const TestPage: React.FC = () => {
   const [isFromReview, setIsFromReview] = useState(false);
 
   // Test state
-  const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
+  // const [selectedAnswers, setSelectedAnswers] = useState<(string | null)[]>([]);
   const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>(
     []
   );
-  const [totalTimeLeft, setTotalTimeLeft] = useState(3600);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(20);
+  const [submit, setSubmit] = useState<boolean>(false);
 
   // Warning and modal state
   const [warningCount, setWarningCount] = useState(0);
@@ -80,49 +85,6 @@ const TestPage: React.FC = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactMessage, setContactMessage] = useState("");
-
-  // Submit test attempt to Firestore
-  const submitTestAttempt = async (score: number) => {
-    if (!user?.nmId) return;
-
-    const attempt: TestAttempt = {
-      nmId: user.nmId,
-      courseId,
-      timestamp: new Date(),
-      questions: questions.map((q, index) => ({
-        questionId: q.id,
-        question: q.text,
-        attemptedAnswer: selectedAnswers[index],
-        correctAnswer: q.correctAnswer,
-        isCorrect: selectedAnswers[index] === q.correctAnswer,
-        timeTaken: timeTakenPerQuestion[index],
-      })),
-      totalScore: score,
-      totalQuestions: questions.length,
-    };
-
-    try {
-      await addDoc(collection(db, "attempts"), attempt);
-    } catch (error) {
-      console.error("Error submitting test attempt:", error);
-    }
-  };
-
-  const handleFinish = async () => {
-    const score = selectedAnswers.filter(
-      (answer, index) =>
-        answer !== null && answer.toString() === questions[index].correctAnswer
-    ).length;
-
-    await submitTestAttempt(score);
-    navigate("/results", {
-      state: {
-        score,
-        totalQuestions: questions.length,
-        courseId,
-      },
-    });
-  };
 
   // Fetch questions when component mounts
   useEffect(() => {
@@ -164,7 +126,7 @@ const TestPage: React.FC = () => {
           setWarningCount((prev) => {
             const newCount = prev + 1;
             if (newCount >= 3) {
-              handleFinish();
+              setSubmit(true);
               return prev;
             }
             setShowWarning(true);
@@ -225,7 +187,7 @@ const TestPage: React.FC = () => {
             setShowReview(true);
           }
           if (prev <= 1) {
-            handleFinish();
+            setSubmit(true);
             return 0;
           }
           return prev - 1;
@@ -321,6 +283,64 @@ const TestPage: React.FC = () => {
     setTestStarted(true);
   };
 
+  // Submit test attempt to Firestore
+
+  useEffect(() => {
+    if (submit) {
+      try {
+        const submitTestAttempt = async (score: number) => {
+          if (!user?.nmId) return;
+
+          const attempt: TestAttempt = {
+            nmId: user.nmId,
+            courseId,
+            timestamp: new Date(),
+            questions: questions.map((q, index) => ({
+              questionId: q.id,
+              question: q.text,
+              attemptedAnswer: selectedAnswers[index],
+              correctAnswer: q.correctAnswer,
+              isCorrect: selectedAnswers[index] === q.correctAnswer,
+              timeTaken: timeTakenPerQuestion[index],
+            })),
+            totalScore: score,
+            totalQuestions: questions.length,
+          };
+
+          try {
+            await addDoc(collection(db, "attempts"), attempt);
+          } catch (error) {
+            console.error("Error submitting test attempt:", error);
+          }
+        };
+
+        const handleFinish = async () => {
+          console.log(selectedAnswers);
+          const score = selectedAnswers.filter(
+            (answer, index) =>
+              answer !== null &&
+              answer.toString() === questions[index].correctAnswer
+          ).length;
+
+          await submitTestAttempt(score);
+          navigate("/results", {
+            state: {
+              score,
+              totalQuestions: questions.length,
+              courseId,
+            },
+          });
+        };
+
+        handleFinish();
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setSubmit(false);
+      }
+    }
+  }, [submit]);
+
   // Show loading state
   if (loading) {
     return (
@@ -373,7 +393,7 @@ const TestPage: React.FC = () => {
           setShowReview(false);
           setCurrentQuestion(questions.length - 1);
         }}
-        onSubmit={handleFinish}
+        onSubmit={() => setSubmit(true)}
         onQuestionSelect={handleQuestionSelect}
       />
     );
