@@ -472,18 +472,18 @@ const TestPage: React.FC = () => {
                       </h4>
                       <div className="space-y-3">
                         <a
-                          href="mailto:support@rareminds.com"
+                          href="mailto:info@rareminds.in"
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
                           <Mail className="w-4 h-4 text-blue-600" />
-                          <span>support@rareminds.com</span>
+                          <span>info@rareminds.in</span>
                         </a>
                         <a
                           href="tel:+1234567890"
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm"
                         >
                           <Phone className="w-4 h-4 text-blue-600" />
-                          <span>+1 (234) 567-890</span>
+                          <span>+91 9902326951</span>
                         </a>
                         <button
                           onClick={() => setShowContactForm(true)}
