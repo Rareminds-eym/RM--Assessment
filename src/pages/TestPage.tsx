@@ -72,7 +72,7 @@ const TestPage: React.FC = () => {
   const [timeTakenPerQuestion, setTimeTakenPerQuestion] = useState<number[]>(
     []
   );
-  const [totalTimeLeft, setTotalTimeLeft] = useState(20);
+  const [totalTimeLeft, setTotalTimeLeft] = useState(900);
   const [submit, setSubmit] = useState<boolean>(false);
 
   // Warning and modal state
@@ -180,9 +180,10 @@ const TestPage: React.FC = () => {
     if (testStarted) {
       totalTimerRef.current = setInterval(() => {
         setTotalTimeLeft((prev) => {
-          if (prev === 1800) {
-            setShowTimeWarning("half-time");
-          } else if (prev === 600) {
+          // if (prev === 1800) {
+          //   setShowTimeWarning("half-time");
+          // } else 
+          if (prev === 300) {
             setShowTimeWarning("review-time");
             setShowReview(true);
           }

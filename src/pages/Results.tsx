@@ -73,14 +73,14 @@ const Results: React.FC = () => {
           {/* Results */}
           <div className="px-6 py-8 sm:px-8">
             {/* Score Display */}
-            <div className="text-center mb-8">
+            {/* <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center h-24 w-24 rounded-full bg-blue-100 mb-4">
                 <span className="text-2xl font-bold text-blue-600">{percentage}%</span>
               </div>
               <p className="text-lg text-gray-600">
                 You scored {score} out of {totalQuestions} questions correctly
               </p>
-            </div>
+            </div> */}
 
             {/* Feedback */}
             <div className="mb-8 text-center">
