@@ -50,9 +50,9 @@ function App() {
     return <Loader />;
   }
 
-  if (networkError) {
-    return <NetworkError />;
-  }
+  // if (networkError) {
+  //   return <NetworkError />;
+  // }
 
   return (
     <AuthProvider>
