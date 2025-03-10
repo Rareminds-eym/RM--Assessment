@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, HelpCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { sendPasswordResetEmail, getAuth} from 'firebase/auth';
-import { app } from '../firebaseConfig'; 
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, LogIn, HelpCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { sendPasswordResetEmail, getAuth } from "firebase/auth";
+import { app } from "../firebaseConfig";
 
 const LoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -19,17 +19,19 @@ const LoginForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    
+    setError("");
+
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     try {
       setIsLoading(true);
-      await login(email, password);
-      navigate('/dashboard');
+      await login(email, password).then(() => {
+        console.log("logging in...")
+        navigate('/dashboard');
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -39,11 +41,11 @@ const LoginForm: React.FC = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setResetSent(false);
 
     if (!forgotEmail) {
-      setError('Please enter your email address');
+      setError("Please enter your email address");
       return;
     }
 
@@ -62,25 +64,29 @@ const LoginForm: React.FC = () => {
     }
   };
 
-
   return (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-        <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
+        <p className="mt-2 text-gray-600">
+          Sign in to your account to continue
+        </p>
       </div>
-      
+
       {error && (
         <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
         </div>
       )}
-      
+
       {!showForgotPassword ? (
         <>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email Address
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -100,14 +106,17 @@ const LoginForm: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div>
               <div className="flex justify-between items-center">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowForgotPassword(true)}
                   className="text-sm font-medium text-blue-600 hover:text-blue-500"
                 >
@@ -131,7 +140,7 @@ const LoginForm: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div>
               <button
                 type="submit"
@@ -140,9 +149,25 @@ const LoginForm: React.FC = () => {
               >
                 {isLoading ? (
                   <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Processing...
                   </span>
@@ -155,11 +180,14 @@ const LoginForm: React.FC = () => {
               </button>
             </div>
           </form>
-          
+
           <div className="text-center mt-4">
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
                 Sign up
               </Link>
             </p>
@@ -171,14 +199,20 @@ const LoginForm: React.FC = () => {
             <form className="mt-8 space-y-6" onSubmit={handleForgotPassword}>
               <div className="text-center mb-4">
                 <HelpCircle className="h-12 w-12 text-blue-500 mx-auto mb-2" />
-                <h2 className="text-xl font-semibold text-gray-900">Forgot Password</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Forgot Password
+                </h2>
                 <p className="mt-2 text-sm text-gray-600">
-                  Enter your email address and we'll send you a link to reset your password.
+                  Enter your email address and we'll send you a link to reset
+                  your password.
                 </p>
               </div>
-              
+
               <div>
-                <label htmlFor="forgotEmail" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="forgotEmail"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Email Address
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -198,7 +232,7 @@ const LoginForm: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="flex space-x-3">
                 <button
                   type="button"
@@ -214,9 +248,25 @@ const LoginForm: React.FC = () => {
                 >
                   {isLoading ? (
                     <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Sending...
                     </span>
@@ -229,13 +279,27 @@ const LoginForm: React.FC = () => {
           ) : (
             <div className="mt-8 text-center">
               <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="h-6 w-6 text-green-600"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900">Check Your Email</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Check Your Email
+              </h2>
               <p className="mt-2 text-sm text-gray-600">
-                We've sent a password reset link to <span className="font-medium">{forgotEmail}</span>
+                We've sent a password reset link to{" "}
+                <span className="font-medium">{forgotEmail}</span>
               </p>
               <button
                 type="button"

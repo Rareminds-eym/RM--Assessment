@@ -4,12 +4,20 @@ export interface User {
   email: string;
   username: string;
   sem: string;
+  teamname: string;
 }
 
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (nmId: string, email: string, password: string, username: string, sem: string) => Promise<void>;
+  signup: (
+    nmId: string,
+    email: string,
+    password: string,
+    username: string,
+    sem: string,
+    teamname: string
+  ) => Promise<string>;
   logout: () => void;
   isAuthenticated: boolean;
 }
