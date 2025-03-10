@@ -2,8 +2,6 @@ export interface User {
   id: string;
   nmId: string;
   email: string;
-  username: string;
-  sem: string;
   teamname: string;
 }
 
@@ -14,8 +12,6 @@ export interface AuthContextType {
     nmId: string,
     email: string,
     password: string,
-    username: string,
-    sem: string,
     teamname: string
   ) => Promise<string>;
   logout: () => void;
@@ -36,7 +32,7 @@ export interface Course {
   title: string;
   description: string;
   icon: React.ElementType;
-  courseId: string;
+  courseId: number;
 }
 
 export interface TestAnswer {

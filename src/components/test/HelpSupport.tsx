@@ -41,7 +41,7 @@ const HelpSupport: React.FC<HelpSupportProps> = ({ onSubmit }) => {
               <HelpCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 font-serif">Need Help?</h3>
               <p className="mt-2 text-sm text-gray-500">
-                If you're experiencing any technical issues or have questions about the test,
+                If you're experiencing any technical issues or have questions about the hackathon,
                 please describe your problem below.
               </p>
             </div>

@@ -100,8 +100,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     nmId: string,
     email: string,
     password: string,
-    username: string,
-    sem: string,
     teamname: string
   ) => {
     try {
@@ -114,8 +112,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: newUser.uid,
         nmId,
         email,
-        username,
-        sem,
         teamname
       };
 

@@ -25,13 +25,13 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ onPermissionsGrante
       name: 'Microphone',
       icon: Mic,
       status: 'pending',
-      description: 'Required for audio monitoring during the test'
+      description: 'Required for audio monitoring during the hackathon'
     },
     {
       name: 'Full Screen',
       icon: Maximize2,
       status: 'pending',
-      description: 'Required to prevent tab switching and maintain test integrity'
+      description: 'Required to prevent tab switching and maintain hackathon integrity'
     }
   ]);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +100,7 @@ const PermissionsModal: React.FC<PermissionsModalProps> = ({ onPermissionsGrante
             </div>
             <h2 className="text-xl font-bold text-gray-900 font-serif">Permissions Required</h2>
             <p className="mt-2 text-gray-600">
-              Please grant the following permissions to ensure test integrity and proctoring.
+              Please grant the following permissions to ensure hackathon integrity and proctoring.
             </p>
           </div>
 

@@ -20,7 +20,7 @@ import PermissionsModal from "../components/test/PermissionsModal";
 import WarningModal from "../components/test/WarningModal";
 import TimeWarningModal from "../components/test/TimeWarningModal";
 import { useAuth } from "../context/AuthContext";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { useTest } from "../context/TestContext";
 
@@ -182,7 +182,7 @@ const TestPage: React.FC = () => {
         setTotalTimeLeft((prev) => {
           // if (prev === 1800) {
           //   setShowTimeWarning("half-time");
-          // } else 
+          // } else
           if (prev === 300) {
             setShowTimeWarning("review-time");
             setShowReview(true);
@@ -309,7 +309,10 @@ const TestPage: React.FC = () => {
           };
 
           try {
-            await addDoc(collection(db, "attempts"), attempt);
+            // await addDoc(collection(db, "attempts"), attempt);
+            const attemptRef = doc(db, "attempts", user.nmId);
+            await setDoc(attemptRef, attempt); // Save the attempt data
+            console.log("Test attempt saved successfully with ID:", user.nmId);
           } catch (error) {
             console.error("Error submitting test attempt:", error);
           }
@@ -475,7 +478,7 @@ const TestPage: React.FC = () => {
                 {!showContactForm ? (
                   <>
                     <div className="space-y-4 text-sm text-gray-600">
-                      <p>• Total time limit is 1 hour</p>
+                      <p>• Total time limit is 15 minutes</p>
                       <p>
                         • You can navigate between questions using the number
                         buttons or Previous/Next
@@ -506,13 +509,13 @@ const TestPage: React.FC = () => {
                           <Phone className="w-4 h-4 text-blue-600" />
                           <span>+91 9902326951</span>
                         </a>
-                        <button
+                        {/* <button
                           onClick={() => setShowContactForm(true)}
                           className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-sm w-full"
                         >
                           <MessageSquare className="w-4 h-4 text-blue-600" />
                           <span>Send us a message</span>
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   </>

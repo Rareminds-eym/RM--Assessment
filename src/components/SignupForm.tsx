@@ -1,21 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, User, BookOpen, Hash, UserPlus, Users } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  User,
+  BookOpen,
+  Hash,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebaseConfig"; // Firestore import
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  where,
+} from "firebase/firestore";
 
 const SignupForm: React.FC = () => {
   const [nmId, setNmId] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [sem, setSem] = useState("");
+  // const [username, setUsername] = useState("");
+  // const [sem, setSem] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
   const [teamname, setTeamname] = useState("");
+  const [upload, setUpload] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +40,7 @@ const SignupForm: React.FC = () => {
     setError("");
     setSuccess("");
 
-    if (!nmId || !email || !password || !username || !sem || !teamname) {
+    if (!nmId || !email || !password || !teamname) {
       setError("Please fill in all fields");
       return;
     }
@@ -33,29 +50,44 @@ const SignupForm: React.FC = () => {
       console.log(nmId);
 
       // Check if NM ID exists in Firestore
-      const nmRef = doc(db, "nm-students", nmId);
+      // const nmRef = doc(db, "nm-students", nmId);
 
       try {
-        const nmSnap = await getDoc(nmRef);
+        // const nmSnap = await getDoc(nmRef);
 
-        console.log("Firestore Document: ", nmSnap); // Check what’s returned
+        const studentsRef = collection(db, "nm-students");
+        const q = query(
+          studentsRef,
+          where("StudentRollNo", "==", nmId),
+          limit(1)
+        ); // Query with where and limit(1)
+        const querySnapshot = await getDocs(q);
 
-        if (!nmSnap.exists()) {
+        if (querySnapshot.empty) {
+          console.log("No student found with this roll number.");
           setError("NM ID not found in records. Please contact the admin.");
-          setIsLoading(false);
-          return;
+          return null;
         }
+
+        const student: any = {
+          id: querySnapshot.docs[0].id,
+          ...querySnapshot.docs[0].data(),
+        };
+        console.log("Fetched Student:", student);
+        setNmId(student.NMId);
+        setUpload(true);
+
+        // console.log("Firestore Document: ", nmSnap.data()); // Check what’s returned
+
+        // if (!nmSnap.exists()) {
+        //   setError("NM ID not found in records. Please contact the admin.");
+        //   setIsLoading(false);
+        //   return;
+        // }
 
         // Extract Data from Firestore
         // const studentData = nmSnap.data();
         // console.log("Student Data: ", studentData);
-
-        await signup(nmId, email, password, username, sem, teamname);
-        setSuccess(
-          "Account created! Please verify your email before logging in."
-        );
-
-        setTimeout(() => navigate("/login"), 3000);
       } catch (err: any) {
         console.log("Error fetching Firestore document: ", err);
         setError(err.message || "Failed to create an account");
@@ -77,11 +109,31 @@ const SignupForm: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    try {
+      if (upload) {
+        const addRecords = async () => {
+          await signup(nmId, email, password, teamname);
+          setSuccess(
+            "Account created! Please verify your email before logging in."
+          );
+
+          setTimeout(() => navigate("/login"), 3000);
+        };
+        addRecords();
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to Upload Records");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [nmId, upload]);
+
   return (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-900">Create an Account</h1>
-        <p className="mt-2 text-gray-600">Sign up to start your online test</p>
+        <p className="mt-2 text-gray-600">Sign up to start your online Hackathon</p>
       </div>
 
       {error && (
@@ -102,7 +154,7 @@ const SignupForm: React.FC = () => {
             htmlFor="nmId"
             className="block text-sm font-medium text-gray-700"
           >
-            NM ID
+            Roll No
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -169,7 +221,7 @@ const SignupForm: React.FC = () => {
         </div>
 
         {/* Username Input */}
-        <div>
+        {/* <div>
           <label
             htmlFor="username"
             className="block text-sm font-medium text-gray-700"
@@ -190,7 +242,7 @@ const SignupForm: React.FC = () => {
               placeholder="Enter Username"
             />
           </div>
-        </div>
+        </div> */}
 
         <div>
           <label
@@ -216,7 +268,7 @@ const SignupForm: React.FC = () => {
         </div>
 
         {/* Semester Dropdown */}
-        <div>
+        {/* <div>
           <label
             htmlFor="sem"
             className="block text-sm font-medium text-gray-700"
@@ -240,7 +292,7 @@ const SignupForm: React.FC = () => {
               ))}
             </select>
           </div>
-        </div>
+        </div> */}
 
         {/* Signup Button */}
         <div>

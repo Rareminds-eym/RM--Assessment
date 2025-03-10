@@ -64,9 +64,9 @@ const Results: React.FC = () => {
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-white bg-opacity-20 mb-6">
               <CheckCircle className="h-12 w-12 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-white font-serif mb-4">Test Complete!</h2>
+            <h2 className="text-3xl font-bold text-white font-serif mb-4">Hackathon Complete!</h2>
             <p className="text-xl text-white text-opacity-90">
-              You've completed the {course?.title || 'Test'}
+              You've completed the {course?.title || 'Hackathon'}
             </p>
           </div>
 

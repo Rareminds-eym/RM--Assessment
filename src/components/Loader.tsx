@@ -17,7 +17,7 @@ const Loader: React.FC = () => {
         
         <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
         <h2 className="mt-4 text-xl font-semibold text-gray-800">Loading...</h2>
-        <p className="mt-2 text-gray-600">Please wait while we prepare your test environment</p>
+        <p className="mt-2 text-gray-600">Please wait while we prepare your hackathon environment</p>
       </div>
     </div>
   );

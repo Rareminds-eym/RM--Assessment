@@ -1,6 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Mail, Hash, BookOpen, ArrowLeft, GraduationCap, Users, Fingerprint, Building, Code, Book, School } from "lucide-react";
+import {
+  User,
+  Mail,
+  Hash,
+  BookOpen,
+  ArrowLeft,
+  GraduationCap,
+  Users,
+  Fingerprint,
+  Building,
+  Code,
+  Book,
+  School,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -75,7 +88,7 @@ const Profile: React.FC = () => {
               </div>
               <div className="ml-4">
                 <h3 className="text-lg leading-6 font-medium text-white font-serif">
-                  {user.username}
+                  {student?.StudentName}
                 </h3>
                 <p className="text-sm text-blue-100">Student</p>
               </div>
@@ -118,7 +131,9 @@ const Profile: React.FC = () => {
                   <Book className="h-4 w-4 mr-2" />
                   Department
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900">{student?.Branch}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {student?.Branch}
+                </dd>
               </div>
               <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
@@ -134,14 +149,18 @@ const Profile: React.FC = () => {
                   <Building className="h-4 w-4 mr-2" />
                   College Name
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900">{student?.CollegeName}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {student?.CollegeName}
+                </dd>
               </div>
               <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
                   <Code className="h-4 w-4 mr-2" />
                   College Code
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900">{student?.CollegeCode}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {student?.CollegeCode}
+                </dd>
               </div>
               <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">
@@ -155,7 +174,9 @@ const Profile: React.FC = () => {
                   <School className="h-4 w-4 mr-2" />
                   University Name
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900">{student?.UniversityName}</dd>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {student?.UniversityName}
+                </dd>
               </div>
             </dl>
           </div>
