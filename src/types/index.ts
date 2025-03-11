@@ -16,6 +16,7 @@ export interface AuthContextType {
   ) => Promise<string>;
   logout: () => void;
   isAuthenticated: boolean;
+  setIsAuthenticated: (auth: boolean) => void;
 }
 
 export interface Question {

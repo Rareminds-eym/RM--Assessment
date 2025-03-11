@@ -13,7 +13,7 @@ const LoginForm: React.FC = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
-  const { login } = useAuth();
+  const { login,setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const auth = getAuth(app);
 
@@ -30,6 +30,7 @@ const LoginForm: React.FC = () => {
       setIsLoading(true);
       await login(email, password).then(() => {
         console.log("logging in...")
+        setIsAuthenticated(true)
         navigate('/dashboard');
       });
     } catch (err: any) {
