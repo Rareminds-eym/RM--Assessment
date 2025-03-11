@@ -115,7 +115,7 @@ const Profile: React.FC = () => {
                   <BookOpen className="h-4 w-4 mr-2" />
                   Semester
                 </dt>
-                <dd className="mt-1 text-sm text-gray-900">{user?.sem}</dd>
+                <dd className="mt-1 text-sm text-gray-900">{student?.Semester}</dd>
               </div>
               <div className="sm:col-span-1">
                 <dt className="text-sm font-medium text-gray-500 flex items-center">

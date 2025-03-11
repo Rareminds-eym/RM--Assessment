@@ -8,6 +8,7 @@ import {
   Hash,
   UserPlus,
   Users,
+  Phone,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebaseConfig"; // Firestore import
@@ -20,6 +21,8 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { div } from "framer-motion/client";
+import ProfileInfo from "./ProfileInfo";
 
 const SignupForm: React.FC = () => {
   const [nmId, setNmId] = useState("");
@@ -33,7 +36,9 @@ const SignupForm: React.FC = () => {
   const { signup } = useAuth();
   const [teamname, setTeamname] = useState("");
   const [upload, setUpload] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const navigate = useNavigate();
+  const [studentData, setStudentData] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,9 +53,6 @@ const SignupForm: React.FC = () => {
     try {
       setIsLoading(true);
       console.log(nmId);
-
-      // Check if NM ID exists in Firestore
-      // const nmRef = doc(db, "nm-students", nmId);
 
       try {
         // const nmSnap = await getDoc(nmRef);
@@ -74,34 +76,18 @@ const SignupForm: React.FC = () => {
           ...querySnapshot.docs[0].data(),
         };
         console.log("Fetched Student:", student);
+
+        setStudentData(student);
+
         setNmId(student.NMId);
-        setUpload(true);
-
-        // console.log("Firestore Document: ", nmSnap.data()); // Check what’s returned
-
-        // if (!nmSnap.exists()) {
-        //   setError("NM ID not found in records. Please contact the admin.");
-        //   setIsLoading(false);
-        //   return;
-        // }
-
-        // Extract Data from Firestore
-        // const studentData = nmSnap.data();
-        // console.log("Student Data: ", studentData);
+        // setUpload(true);
+        setShowInfo(true);
       } catch (err: any) {
         console.log("Error fetching Firestore document: ", err);
         setError(err.message || "Failed to create an account");
       } finally {
         setIsLoading(false);
       }
-
-      // await signup(nmId, email, password, username, sem, teamname);
-      // setSuccess(
-      //   "Account created! Please verify your email before logging in."
-      // );
-
-      // Redirect after a short delay
-      // setTimeout(() => navigate("/login"), 3000);
     } catch (err: any) {
       setError(err.message || "Failed to create an account");
     } finally {
@@ -112,13 +98,16 @@ const SignupForm: React.FC = () => {
   useEffect(() => {
     try {
       if (upload) {
+        console.log("upload", upload)
         const addRecords = async () => {
-          await signup(nmId, email, password, teamname);
-          setSuccess(
-            "Account created! Please verify your email before logging in."
-          );
-
-          setTimeout(() => navigate("/login"), 3000);
+          await signup(nmId, email, password, teamname).then(() => {
+            setSuccess(
+              "Account created! Please verify your email before logging in."
+            );
+            setTimeout(() => navigate("/login"), 3000);
+          }).catch((error)=>{
+            setError(error.message || "Failed to create account")
+          });
         };
         addRecords();
       }
@@ -130,98 +119,107 @@ const SignupForm: React.FC = () => {
   }, [nmId, upload]);
 
   return (
-    <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Create an Account</h1>
-        <p className="mt-2 text-gray-600">Sign up to start your online Hackathon</p>
-      </div>
-
-      {error && (
-        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
+    <div
+      className={`grid ${
+        showInfo ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+      } `}
+    >
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg mx-auto transition-all">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Create an Account
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Sign up to start your online Hackathon
+          </p>
         </div>
-      )}
-      {success && (
-        <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-          {success}
-        </div>
-      )}
 
-      <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-        {/* NM ID Input */}
-        <div>
-          <label
-            htmlFor="nmId"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Roll No
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Hash className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="nmId"
-              type="text"
-              required
-              value={nmId}
-              onChange={(e) => setNmId(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="NM123456"
-            />
+        {error && (
+          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
           </div>
-        </div>
-
-        {/* Email Input */}
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Email Address
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter your email"
-            />
+        )}
+        {success && (
+          <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+            {success}
           </div>
-        </div>
+        )}
 
-        {/* Password Input */}
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Password
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+          {/* NM ID Input */}
+          <div>
+            <label
+              htmlFor="nmId"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Roll No
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Hash className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="nmId"
+                type="text"
+                required
+                value={nmId}
+                onChange={(e) => setNmId(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your roll number"
+              />
             </div>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="••••••••"
-            />
           </div>
-        </div>
 
-        {/* Username Input */}
-        {/* <div>
+          {/* Email Input */}
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Email Address
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Mail className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email"
+              />
+            </div>
+          </div>
+
+          {/* Password Input */}
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Password
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+
+          {/* Username Input */}
+          {/* <div>
           <label
             htmlFor="username"
             className="block text-sm font-medium text-gray-700"
@@ -244,31 +242,54 @@ const SignupForm: React.FC = () => {
           </div>
         </div> */}
 
-        <div>
-          <label
-            htmlFor="teamname"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Team Name
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Users className="h-5 w-5 text-gray-400" />
+          <div>
+            <label
+              htmlFor="teamname"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Team Name
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Users className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="teamname"
+                type="text"
+                required
+                value={teamname}
+                onChange={(e) => setTeamname(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter team Name"
+              />
             </div>
-            <input
-              id="teamname"
-              type="text"
-              required
-              value={teamname}
-              onChange={(e) => setTeamname(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter team Name"
-            />
           </div>
-        </div>
 
-        {/* Semester Dropdown */}
-        {/* <div>
+          <div>
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Phone
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Phone className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="phone"
+                type="text"
+                required
+                // value={teamname}
+                // onChange={(e) => setTeamname(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your phone number"
+              />
+            </div>
+          </div>
+
+          {/* Semester Dropdown */}
+          {/* <div>
           <label
             htmlFor="sem"
             className="block text-sm font-medium text-gray-700"
@@ -294,35 +315,43 @@ const SignupForm: React.FC = () => {
           </div>
         </div> */}
 
-        {/* Signup Button */}
-        <div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {isLoading ? (
-              "Processing..."
-            ) : (
-              <>
-                <UserPlus className="h-5 w-5 mr-2" /> Sign up
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+          {/* Signup Button */}
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {isLoading ? (
+                "Processing..."
+              ) : (
+                <>
+                  <UserPlus className="h-5 w-5 mr-2" /> Sign up
+                </>
+              )}
+            </button>
+          </div>
+        </form>
 
-      <div className="text-center mt-4">
-        <p className="text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
-          >
-            Sign in
-          </Link>
-        </p>
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
+      {showInfo && studentData && (
+        <ProfileInfo
+          userData={studentData}
+          setUpload={setUpload}
+          setError={setError}
+        />
+      )}
     </div>
   );
 };

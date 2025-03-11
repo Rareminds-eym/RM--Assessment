@@ -16,7 +16,7 @@ const Signup: React.FC = () => {
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="mt-8 sm:mx-auto sm:w-full max-w-[1200px]">
         <SignupForm />
       </div>
     </div>
