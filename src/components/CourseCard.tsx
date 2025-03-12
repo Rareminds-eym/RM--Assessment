@@ -1,7 +1,10 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { Course } from '../types';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig"; // Adjust import path
+import { Course } from "../types";
+import { useAuth } from "../context/AuthContext"; // Import authentication context
 
 interface CourseCardProps {
   course: Course;
@@ -11,9 +14,37 @@ interface CourseCardProps {
 const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
   const Icon = course.icon;
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get logged-in user
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleStartTest = () => {
-    navigate('/test', { state: { courseId: course.id } });
+  const handleStartTest = async () => {
+    if (!user?.nmId) {
+      setError("You must be logged in to start the test.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Step 1: Check Firestore if nmId already exists in "attempts"
+      const attemptsRef = collection(db, "attempts");
+      const q = query(attemptsRef, where("nmId", "==", user.nmId), where("courseId", "==", course.id));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        setError("Test already taken.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: If not found, allow test to start
+      navigate("/test", { state: { courseId: course.id } });
+    } catch (error) {
+      console.error("Error checking test attempt:", error);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,15 +71,19 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onSelect }) => {
           </p>
         </div>
       </div>
-      
+
       <div className="bg-gray-50 p-4 flex flex-col items-center">
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handleStartTest}
-          className="px-4 py-2 rounded-lg font-medium w-full max-w-xs bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={loading}
+          className={`px-4 py-2 rounded-lg font-medium w-full max-w-xs text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+          }`}
         >
-          Start Hackathon
+          {loading ? "Checking..." : "Start Hackathon"}
         </motion.button>
       </div>
     </motion.div>

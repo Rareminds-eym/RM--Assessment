@@ -9,6 +9,8 @@ import {
   UserPlus,
   Users,
   Phone,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebaseConfig"; // Firestore import
@@ -21,15 +23,20 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { div } from "framer-motion/client";
 import ProfileInfo from "./ProfileInfo";
 
 const SignupForm: React.FC = () => {
   const [nmId, setNmId] = useState("");
+  const [rollNo, setRollNo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rePassword, setRePassword] = useState("");
+  const [viewPassword, setViewPassword] = useState(false);
+  const [phone, setPhone] = useState("");
+
   // const [username, setUsername] = useState("");
   // const [sem, setSem] = useState("");
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -45,14 +52,19 @@ const SignupForm: React.FC = () => {
     setError("");
     setSuccess("");
 
-    if (!nmId || !email || !password || !teamname) {
+    if (!rollNo || !email || !password || !teamname || !rePassword || !phone) {
       setError("Please fill in all fields");
+      return;
+    }
+
+    if (password != rePassword) {
+      setError("Passwords do not match");
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log(nmId);
+      // console.log(nmId);
 
       try {
         // const nmSnap = await getDoc(nmRef);
@@ -60,14 +72,14 @@ const SignupForm: React.FC = () => {
         const studentsRef = collection(db, "nm-students");
         const q = query(
           studentsRef,
-          where("StudentRollNo", "==", nmId),
+          where("StudentRollNo", "==", rollNo),
           limit(1)
         ); // Query with where and limit(1)
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log("No student found with this roll number.");
-          setError("NM ID not found in records. Please contact the admin.");
+          // console.log("No student found with this roll number.");
+          setError("Roll number not found in records. Please contact the admin.");
           return null;
         }
 
@@ -98,16 +110,18 @@ const SignupForm: React.FC = () => {
   useEffect(() => {
     try {
       if (upload) {
-        console.log("upload", upload)
+        console.log("upload", upload);
         const addRecords = async () => {
-          await signup(nmId, email, password, teamname).then(() => {
-            setSuccess(
-              "Account created! Please verify your email before logging in."
-            );
-            setTimeout(() => navigate("/login"), 3000);
-          }).catch((error)=>{
-            setError(error.message || "Failed to create account")
-          });
+          await signup(nmId, email, password, teamname)
+            .then(() => {
+              setSuccess(
+                "Account created! Please verify your email before logging in."
+              );
+              setTimeout(() => navigate("/login"), 3000);
+            })
+            .catch((error) => {
+              setError(error.message || "Failed to create account");
+            });
         };
         addRecords();
       }
@@ -117,6 +131,14 @@ const SignupForm: React.FC = () => {
       setIsLoading(false);
     }
   }, [nmId, upload]);
+
+  const ViewPass = () => {
+    if (viewPassword) {
+      setViewPassword(false);
+    } else {
+      setViewPassword(true);
+    }
+  };
 
   return (
     <div
@@ -149,7 +171,7 @@ const SignupForm: React.FC = () => {
           {/* NM ID Input */}
           <div>
             <label
-              htmlFor="nmId"
+              htmlFor="rollNo"
               className="block text-sm font-medium text-gray-700"
             >
               Roll No
@@ -159,11 +181,11 @@ const SignupForm: React.FC = () => {
                 <Hash className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                id="nmId"
+                id="rollNo"
                 type="text"
                 required
-                value={nmId}
-                onChange={(e) => setNmId(e.target.value)}
+                value={rollNo}
+                onChange={(e) => setRollNo(e.target.value)}
                 className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your roll number"
               />
@@ -208,13 +230,58 @@ const SignupForm: React.FC = () => {
               </div>
               <input
                 id="password"
-                type="password"
+                type={viewPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="••••••••"
               />
+              {viewPassword ? (
+                <EyeOff
+                  className="absolute right-2 top-[50%] -translate-y-[50%] text-gray-400 cursor-pointer"
+                  onClick={ViewPass}
+                />
+              ) : (
+                <Eye
+                  className="absolute right-2 top-[50%] -translate-y-[50%] text-gray-400 cursor-pointer"
+                  onClick={ViewPass}
+                />
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="re-password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Re-Enter your Password
+            </label>
+            <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                id="re-password"
+                type={viewPassword ? "text" : "password"}
+                required
+                value={rePassword}
+                onChange={(e) => setRePassword(e.target.value)}
+                className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+              />
+              {viewPassword ? (
+                <EyeOff
+                  className="absolute right-2 top-[50%] -translate-y-[50%] text-gray-400 cursor-pointer"
+                  onClick={ViewPass}
+                />
+              ) : (
+                <Eye
+                  className="absolute right-2 top-[50%] -translate-y-[50%] text-gray-400 cursor-pointer"
+                  onClick={ViewPass}
+                />
+              )}
             </div>
           </div>
 
@@ -278,10 +345,10 @@ const SignupForm: React.FC = () => {
               </div>
               <input
                 id="phone"
-                type="text"
+                type="tel"
                 required
-                // value={teamname}
-                // onChange={(e) => setTeamname(e.target.value)}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your phone number"
               />
