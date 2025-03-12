@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 // import { AuthProvider } from "./context/AuthContext";
 import { TestProvider } from "./context/TestContext";
@@ -17,6 +18,21 @@ import Results from "./pages/Results";
 import Profile from "./pages/Profile";
 import NetworkError from "./pages/NetworkError";
 import Footer from "./components/Footer";
+import { analytics } from "./firebaseConfig";
+import { logEvent } from "firebase/analytics";
+
+const AnalyticsTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (analytics) {
+      logEvent(analytics, "page_view", { page_path: location.pathname });
+      console.log("Logged Page View:", location.pathname);
+    }
+  }, [location]);
+
+  return null;
+};
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -67,6 +83,7 @@ function App() {
         <div className="flex flex-col min-h-screen">
           <div className="flex-grow">
             <Router>
+            <AnalyticsTracker />
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/login" element={<Login />} />

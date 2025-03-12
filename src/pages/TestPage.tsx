@@ -21,8 +21,9 @@ import WarningModal from "../components/test/WarningModal";
 import TimeWarningModal from "../components/test/TimeWarningModal";
 import { useAuth } from "../context/AuthContext";
 import { collection, addDoc, doc, setDoc } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { analytics, db } from "../firebaseConfig";
 import { useTest } from "../context/TestContext";
+import { logEvent } from "firebase/analytics";
 
 interface TestAttempt {
   nmId: string;
@@ -282,6 +283,10 @@ const TestPage: React.FC = () => {
   const handlePermissionsGranted = () => {
     setShowPermissions(false);
     setTestStarted(true);
+    if (analytics) {
+      logEvent(analytics, "start_test", { course: courseId });
+      console.log("Logged Event: Start Test");
+    }
   };
 
   // Submit test attempt to Firestore
@@ -326,7 +331,12 @@ const TestPage: React.FC = () => {
               answer.toString() === questions[index].correctAnswer
           ).length;
 
-          await submitTestAttempt(score);
+          await submitTestAttempt(score).then(()=>{
+            if (analytics) {
+              logEvent(analytics, "submit_test", { course: courseId });
+              console.log("Logged Event: Submit Test");
+            }
+          });
           navigate("/results", {
             state: {
               score,
