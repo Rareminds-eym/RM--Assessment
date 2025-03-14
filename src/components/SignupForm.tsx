@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,
@@ -46,19 +46,34 @@ const SignupForm: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
   const navigate = useNavigate();
   const [studentData, setStudentData] = useState<any>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
+
+  const scrollErrorRef = () => {
+    errorRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollSuccessRef = () => {
+    successRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setIsLoading(true);
 
     if (!rollNo || !email || !password || !teamname || !rePassword || !phone) {
       setError("Please fill in all fields");
+      scrollErrorRef();
+      setIsLoading(false);
       return;
     }
 
     if (password != rePassword) {
       setError("Passwords do not match");
+      scrollErrorRef();
+      setIsLoading(false);
       return;
     }
 
@@ -79,7 +94,9 @@ const SignupForm: React.FC = () => {
 
         if (querySnapshot.empty) {
           // console.log("No student found with this roll number.");
-          setError("Roll number not found in records. Please contact the admin.");
+          setError(
+            "Roll number not found in records. Please contact the admin."
+          );
           return null;
         }
 
@@ -117,16 +134,20 @@ const SignupForm: React.FC = () => {
               setSuccess(
                 "Account created! Please verify your email before logging in."
               );
+              scrollSuccessRef();
               setTimeout(() => navigate("/login"), 3000);
             })
             .catch((error) => {
               setError(error.message || "Failed to create account");
+              scrollErrorRef();
             });
         };
         addRecords();
       }
     } catch (err: any) {
+      console.log("err")
       setError(err.message || "Failed to Upload Records");
+      scrollErrorRef();
     } finally {
       setIsLoading(false);
     }
@@ -157,12 +178,18 @@ const SignupForm: React.FC = () => {
         </div>
 
         {error && (
-          <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div
+            ref={errorRef}
+            className="p-3 bg-red-100 border border-red-400 text-red-700 rounded"
+          >
             {error}
           </div>
         )}
         {success && (
-          <div className="p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+          <div
+            ref={successRef}
+            className="p-3 bg-green-100 border border-green-400 text-green-700 rounded"
+          >
             {success}
           </div>
         )}
@@ -354,33 +381,6 @@ const SignupForm: React.FC = () => {
               />
             </div>
           </div>
-
-          {/* Semester Dropdown */}
-          {/* <div>
-          <label
-            htmlFor="sem"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Semester
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <BookOpen className="h-5 w-5 text-gray-400" />
-            </div>
-            <select
-              id="sem"
-              required
-              value={sem}
-              onChange={(e) => setSem(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select Semester</option>
-              {Array.from({ length: 8 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>{`Semester ${i + 1}`}</option>
-              ))}
-            </select>
-          </div>
-        </div> */}
 
           {/* Signup Button */}
           <div>
