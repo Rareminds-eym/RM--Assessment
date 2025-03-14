@@ -144,30 +144,30 @@ const TestPage: React.FC = () => {
   }, [testStarted, showInstructions, showPermissions]);
 
   // Initialize webcam
-  useEffect(() => {
-    const initializeWebcam = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (error) {
-        console.warn("Webcam not available:", error);
-      }
-    };
+  // useEffect(() => {
+  //   const initializeWebcam = async () => {
+  //     try {
+  //       const stream = await navigator.mediaDevices.getUserMedia({
+  //         video: true,
+  //       });
+  //       if (videoRef.current) {
+  //         videoRef.current.srcObject = stream;
+  //       }
+  //     } catch (error) {
+  //       console.warn("Webcam not available:", error);
+  //     }
+  //   };
 
-    initializeWebcam();
+  //   initializeWebcam();
 
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        const tracks = stream.getTracks();
-        tracks.forEach((track) => track.stop());
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if (videoRef.current && videoRef.current.srcObject) {
+  //       const stream = videoRef.current.srcObject as MediaStream;
+  //       const tracks = stream.getTracks();
+  //       tracks.forEach((track) => track.stop());
+  //     }
+  //   };
+  // }, []);
 
   // Timer effect
   useEffect(() => {
@@ -281,6 +281,7 @@ const TestPage: React.FC = () => {
   };
 
   const handlePermissionsGranted = () => {
+    setShowInstructions(false);
     setShowPermissions(false);
     setTestStarted(true);
     if (analytics) {
@@ -388,7 +389,7 @@ const TestPage: React.FC = () => {
   }
 
   if (showInstructions) {
-    return <InstructionsPage onContinue={handleStartTest} />;
+    return <InstructionsPage onContinue={handlePermissionsGranted} />;
   }
 
   if (showPermissions) {

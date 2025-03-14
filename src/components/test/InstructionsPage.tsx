@@ -118,7 +118,7 @@ const InstructionsPage: React.FC<InstructionsPageProps> = ({ onContinue }) => {
                   Proctoring Information
                 </h4>
                 <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-start gap-2">
+                  {/* <li className="flex items-start gap-2">
                     <Camera className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <span>
                       Camera access is required for proctoring purposes
@@ -131,7 +131,7 @@ const InstructionsPage: React.FC<InstructionsPageProps> = ({ onContinue }) => {
                       Microphone access is required to monitor the hackathon
                       environment
                     </span>
-                  </li>
+                  </li> */}
                   <li className="flex items-start gap-2">
                     <MonitorX className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
                     <span>
