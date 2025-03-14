@@ -3,8 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,
   Lock,
-  User,
-  BookOpen,
   Hash,
   UserPlus,
   Users,
@@ -13,17 +11,10 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebaseConfig"; // Firestore import
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  where,
-} from "firebase/firestore";
+import { db } from "../firebaseConfig";
+import { collection, getDocs, query, where, limit } from "firebase/firestore";
 import ProfileInfo from "./ProfileInfo";
+import { Toaster, toast } from "react-hot-toast";
 
 const SignupForm: React.FC = () => {
   const [nmId, setNmId] = useState("");
@@ -33,10 +24,6 @@ const SignupForm: React.FC = () => {
   const [rePassword, setRePassword] = useState("");
   const [viewPassword, setViewPassword] = useState(false);
   const [phone, setPhone] = useState("");
-
-  // const [username, setUsername] = useState("");
-  // const [sem, setSem] = useState("");
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -65,6 +52,7 @@ const SignupForm: React.FC = () => {
 
     if (!rollNo || !email || !password || !teamname || !rePassword || !phone) {
       setError("Please fill in all fields");
+      toast.error("Please fill in all fields");
       scrollErrorRef();
       setIsLoading(false);
       return;
@@ -72,6 +60,7 @@ const SignupForm: React.FC = () => {
 
     if (password != rePassword) {
       setError("Passwords do not match");
+      toast.error("Passwords do not match");
       scrollErrorRef();
       setIsLoading(false);
       return;
@@ -79,24 +68,21 @@ const SignupForm: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // console.log(nmId);
 
       try {
-        // const nmSnap = await getDoc(nmRef);
-
         const studentsRef = collection(db, "nm-students");
         const q = query(
           studentsRef,
           where("StudentRollNo", "==", rollNo),
           limit(1)
-        ); // Query with where and limit(1)
+        );
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          // console.log("No student found with this roll number.");
           setError(
             "Roll number not found in records. Please contact the admin."
           );
+          toast.error("Roll number not found in records");
           return null;
         }
 
@@ -107,18 +93,18 @@ const SignupForm: React.FC = () => {
         console.log("Fetched Student:", student);
 
         setStudentData(student);
-
         setNmId(student.NMId);
-        // setUpload(true);
         setShowInfo(true);
       } catch (err: any) {
         console.log("Error fetching Firestore document: ", err);
         setError(err.message || "Failed to create an account");
+        toast.error(err.message || "Failed to create an account");
       } finally {
         setIsLoading(false);
       }
     } catch (err: any) {
       setError(err.message || "Failed to create an account");
+      toast.error(err.message || "Failed to create an account");
     } finally {
       setIsLoading(false);
     }
@@ -127,29 +113,34 @@ const SignupForm: React.FC = () => {
   useEffect(() => {
     try {
       if (upload) {
-        console.log("upload", upload);
+        // console.log("upload", upload);
         const addRecords = async () => {
           await signup(nmId, email, password, teamname)
             .then(() => {
               setSuccess(
                 "Account created! Please verify your email before logging in."
               );
+              toast.success("Account created! Please verify your email");
               scrollSuccessRef();
               setTimeout(() => navigate("/login"), 3000);
             })
             .catch((error) => {
               setError(error.message || "Failed to create account");
+              toast.error(error.message || "Failed to create account");
               scrollErrorRef();
             });
         };
         addRecords();
+        setUpload(false);
       }
     } catch (err: any) {
-      console.log("err")
+      console.log("err");
       setError(err.message || "Failed to Upload Records");
+      toast.error(err.message || "Failed to Upload Records");
       scrollErrorRef();
     } finally {
-      setIsLoading(false);
+        setUpload(false);
+        setIsLoading(false);
     }
   }, [nmId, upload]);
 
@@ -162,11 +153,8 @@ const SignupForm: React.FC = () => {
   };
 
   return (
-    <div
-      className={`grid ${
-        showInfo ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
-      } `}
-    >
+    <>
+      <Toaster position="top-right" />
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg mx-auto transition-all">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">
@@ -195,7 +183,6 @@ const SignupForm: React.FC = () => {
         )}
 
         <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-          {/* NM ID Input */}
           <div>
             <label
               htmlFor="rollNo"
@@ -219,7 +206,6 @@ const SignupForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Email Input */}
           <div>
             <label
               htmlFor="email"
@@ -243,7 +229,6 @@ const SignupForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Password Input */}
           <div>
             <label
               htmlFor="password"
@@ -312,30 +297,6 @@ const SignupForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Username Input */}
-          {/* <div>
-          <label
-            htmlFor="username"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Username
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="username"
-              type="text"
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter Username"
-            />
-          </div>
-        </div> */}
-
           <div>
             <label
               htmlFor="teamname"
@@ -382,7 +343,6 @@ const SignupForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Signup Button */}
           <div>
             <button
               type="submit"
@@ -412,14 +372,17 @@ const SignupForm: React.FC = () => {
           </p>
         </div>
       </div>
+
       {showInfo && studentData && (
         <ProfileInfo
           userData={studentData}
           setUpload={setUpload}
           setError={setError}
+          upload={upload}
+          onClose={() => setShowInfo(false)}
         />
       )}
-    </div>
+    </>
   );
 };
 
