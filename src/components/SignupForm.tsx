@@ -35,6 +35,8 @@ const SignupForm: React.FC = () => {
   const [studentData, setStudentData] = useState<any>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
+  const [rollNoSuggestions, setRollNoSuggestions] = useState<string[]>([]);
+
 
   const scrollErrorRef = () => {
     errorRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -69,12 +71,15 @@ const SignupForm: React.FC = () => {
     try {
       setIsLoading(true);
 
+
+
       try {
         const studentsRef = collection(db, "nm-students");
         const q = query(
           studentsRef,
-          where("StudentRollNo", "==", rollNo),
-          limit(1)
+          where("StudentRollNo", ">=", rollNo.toLowerCase()),  // Start of the match
+          where("StudentRollNo", "<=", rollNo.toLowerCase() + "\uf8ff"), // End of the match
+          limit(5) // Limit results to 5 suggestions (adjust as needed)
         );
         const querySnapshot = await getDocs(q);
 
@@ -107,6 +112,29 @@ const SignupForm: React.FC = () => {
       toast.error(err.message || "Failed to create an account");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchRollNoSuggestions = async (input: string) => {
+    if (!input) {
+      setRollNoSuggestions([]);
+      return;
+    }
+  
+    try {
+      const studentsRef = collection(db, "nm-students");
+      const q = query(
+        studentsRef,
+        where("StudentRollNo", ">=", input.toLowerCase()),
+        where("StudentRollNo", "<=", input.toLowerCase() + "\uf8ff"),
+        limit(5)
+      );
+  
+      const querySnapshot = await getDocs(q);
+      const suggestions = querySnapshot.docs.map(doc => doc.data().StudentRollNo);
+      setRollNoSuggestions(suggestions);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
     }
   };
 
@@ -191,7 +219,7 @@ const SignupForm: React.FC = () => {
               Roll No
             </label>
             <div className="mt-1 relative rounded-md shadow-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center h-max pointer-events-none mt-4">
                 <Hash className="h-5 w-5 text-gray-400" />
               </div>
               <input
@@ -199,10 +227,29 @@ const SignupForm: React.FC = () => {
                 type="text"
                 required
                 value={rollNo}
-                onChange={(e) => setRollNo(e.target.value)}
+                onChange={(e) => {
+                  setRollNo(e.target.value);
+                  fetchRollNoSuggestions(e.target.value);}}
                 className="pl-10 block w-full py-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your roll number"
               />
+              {rollNoSuggestions.length > 0 && (
+  <ul className="bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-auto shadow-md">
+    {rollNoSuggestions.map((suggestion, index) => (
+      <li
+        key={index}
+        className="p-2 hover:bg-gray-100 cursor-pointer"
+        onClick={() => {
+          setRollNo(suggestion);
+          setRollNoSuggestions([]);
+        }}
+      >
+        {suggestion}
+      </li>
+    ))}
+  </ul>
+)}
+
             </div>
           </div>
 
