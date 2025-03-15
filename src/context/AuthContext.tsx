@@ -115,8 +115,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         teamname
       };
 
-      await setDoc(doc(db, "users", nmId), userData);
-
+      try {
+        await setDoc(doc(db, "users", nmId), userData);
+      } catch (docError) {
+        // If setting document fails, delete the user from authentication
+        await newUser.delete();
+        throw new Error("Failed to save user data. User registration rolled back.");
+      }
       // Don't set user state here - wait for email verification
       return "Signup successful! Please verify your email before logging in.";
     } catch (error: any) {
